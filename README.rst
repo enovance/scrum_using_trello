@@ -28,10 +28,10 @@ Pre-requesites
 
 The Python scripts are using the py-trello module. Install it by doing:
 
-``pip install py-trello``
+``pip install 'git+https://github.com/sarumont/py-trello.git#egg=py-trello'``
 
-You also need to set the TRELLO_API_KEY and TRELLO_TOKEN environment
-variables.
+You also need to set the ``TRELLO_API_KEY`` and ``TRELLO_TOKEN``
+environment variables.
 
 Grooming board
 **************
