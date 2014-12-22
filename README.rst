@@ -22,6 +22,11 @@ The system is based on the following conventions:
     ``Rejected``, the corresponding item is checked in the user story
     card else the item is unchecked.
     
+* user story and task cards must have an uniq id as the first word of
+  the title for the system to manage association between tasks and
+  user stories. This id may be preceded by evaluation point for the
+  user story between parenthesis to be compatible with
+  http://scrumfortrello.com/.
 
 Pre-requesites
 **************

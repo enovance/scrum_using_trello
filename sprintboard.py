@@ -30,9 +30,9 @@ _NAME_REGEXP = re.compile('(\([0-9]+\)\s*)(.*)')
 def filter_name(name):
     res = _NAME_REGEXP.search(name)
     if res:
-        return res.group(2)
+        return res.group(2).split(' ', 2)[0]
     else:
-        return name
+        return name.split(' ', 2)[0]
 
 if len(sys.argv) != 2:
     print('Usage: %s <board name>' % sys.argv[0])
