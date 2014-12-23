@@ -34,65 +34,71 @@ def filter_name(name):
     else:
         return name.split(' ', 2)[0]
 
-if len(sys.argv) != 2:
-    print('Usage: %s <board name>' % sys.argv[0])
-    sys.exit(1)
 
-client = trellolib.init_client()
+def process_board(board_name):
+    client = trellolib.init_client()
+    
+    sprint_backlog = None
+    sprint_task_lists = []
+    
+    (board,) = trellolib.lookup_boards(client, board_name)
+    
+    if not board:
+        print('unable to find board "%s"' % board_name)
+        sys.exit(1)
+    
+    for lst in board.open_lists():
+        if lst.name == 'User Stories':
+            sprint_backlog = lst
+        elif lst.name.find('Stories') == -1:
+            sprint_task_lists.append(lst)
+    
+    if not sprint_backlog:
+        print('No "User Stories" list. Aborting.')
+        sys.exit(1)
+    
+    stories = {}
+    
+    for card in sprint_backlog.list_cards():
+        card.fetch()
+        stories[filter_name(card.name)] = card
+    
+    for lst in sprint_task_lists:
+        for card in lst.list_cards():
+            us_name = card.name.split(' ')[0]
+            try:
+                item = None
+                task_list = None
+                checked = lst.name in ('Done', 'Rejected')
+                task_list = trellolib.lookup_checklist('Tasks',
+                                                       stories[us_name])
+                if task_list:
+                    item = trellolib.lookup_item(card.url, task_list)
+                if not item:
+                    print('%s not in the Tasks checklist of %s, adding it' %
+                          (card.name, us_name))
+                    if not task_list:
+                        print('Creating the Tasks checklist in %s' % us_name)
+                        task_list = stories[us_name].add_checklist('Tasks',
+                                                                   [card.url, ])
+                    else:
+                        task_list.add_checklist_item(card.url)
+                    item = trellolib.lookup_item(card.url, task_list)
+                if item:
+                    if item['checked'] != checked:
+                        task_list.set_checklist_item(item['name'], checked)
+                        print('Set the checked state of %s to %s' %
+                              (card.name, checked))
+            except KeyError:
+                print('Card "%s" not associated with a User Strory (%s)' %
+                      (card.name, card.url))
 
-sprint_backlog = None
-sprint_task_lists = []
+if __name__ == '__main__':
 
-(board,) = trellolib.lookup_boards(client, sys.argv[1])
+    if len(sys.argv) != 2:
+        print('Usage: %s <board name>' % sys.argv[0])
+        sys.exit(1)
 
-if not board:
-    print('unable to find board "%s"' % sys.argv[1])
-    sys.exit(1)
-
-for lst in board.open_lists():
-    if lst.name == 'User Stories':
-        sprint_backlog = lst
-    elif lst.name.find('Stories') == -1:
-        sprint_task_lists.append(lst)
-
-if not sprint_backlog:
-    print('No "User Stories" list. Aborting.')
-    sys.exit(1)
-
-stories = {}
-
-for card in sprint_backlog.list_cards():
-    card.fetch()
-    stories[filter_name(card.name)] = card
-
-for lst in sprint_task_lists:
-    for card in lst.list_cards():
-        us_name = card.name.split(' ')[0]
-        try:
-            item = None
-            task_list = None
-            checked = lst.name in ('Done', 'Rejected')
-            task_list = trellolib.lookup_checklist('Tasks',
-                                                   stories[us_name])
-            if task_list:
-                item = trellolib.lookup_item(card.url, task_list)
-            if not item:
-                print('%s not in the Tasks checklist of %s, adding it' %
-                      (card.name, us_name))
-                if not task_list:
-                    print('Creating the Tasks checklist in %s' % us_name)
-                    task_list = stories[us_name].add_checklist('Tasks',
-                                                               [card.url, ])
-                else:
-                    task_list.add_checklist_item(card.url)
-                item = trellolib.lookup_item(card.url, task_list)
-            if item:
-                if item['checked'] != checked:
-                    task_list.set_checklist_item(item['name'], checked)
-                    print('Set the checked state of %s to %s' %
-                          (card.name, checked))
-        except KeyError:
-            print('Card "%s" not associated with a User Strory (%s)' %
-                  (card.name, card.url))
+    process_board(sys.argv[1])
 
 # sprintboard.py ends here
