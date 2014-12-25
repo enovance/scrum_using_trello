@@ -19,9 +19,12 @@
 '''
 
 import os
+import re
 import sys
 
 import trello
+
+_NAME_REGEXP = re.compile('(\([0-9]+\)\s*)(.*)')
 
 
 def init_client():
@@ -32,6 +35,14 @@ def init_client():
 
     return trello.TrelloClient(os.environ['TRELLO_API_KEY'],
                                token=os.environ['TRELLO_TOKEN'])
+
+
+def filter_name(name):
+    res = _NAME_REGEXP.search(name)
+    if res:
+        return res.group(2).split(' ', 2)[0]
+    else:
+        return name.split(' ', 2)[0]
 
 
 def lookup_boards(client, *names):

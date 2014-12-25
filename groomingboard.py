@@ -79,7 +79,32 @@ for card in target_list.list_cards():
 # move stories
 
 for card in source_list.list_cards():
+    card.fetch()
+    tasks_checklist = trellolib.lookup_checklist('Tasks', card)
+    if tasks_checklist:
+        print('Renaming "Tasks" checklist to "Prepared Tasks" ' +
+              'in user story "%s"'
+              % (card.name, ))
+        tasks_checklist.rename('Prepared Tasks')
     print('Moving user story "%s" to board "%s"' % (card.name, sys.argv[2]))
     card.change_board(sprint_board.id, target_list.id)
+
+# create task cards
+
+todo_list = trellolib.lookup_list('To Do', sprint_board)
+if todo_list:
+    for card in target_list.list_cards():
+        card.fetch()
+        tasks_checklist = trellolib.lookup_checklist('Prepared Tasks', card)
+        if tasks_checklist:
+            id = trellolib.filter_name(card.name)
+            for item in tasks_checklist.items:
+                task_name = id + ' ' + item['name']
+                print('Created task card "%s" in "%s" sprint board' %
+                      (task_name, sprint_board.name))
+                todo_list.add_card(task_name)
+            tasks_checklist.delete()
+else:
+    print('No "To Do" list on the "%s" sprint board' % sprint_board.name)
 
 # groomingboard.py ends here
