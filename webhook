@@ -19,19 +19,59 @@
 '''
 '''
 
+import base64
 import cgi
 import json
+import hashlib
+import hmac
 import pprint
+import os
+import sys
 
 import sprintboard
 
-form = cgi.FieldStorage()
-data = json.loads(form.value)
 
-try:
-   sprintboard.process_board(data['action']['data']['board']['name'])
-except KeyError:
-   print 'Invalid data:'
-   pprint.pprint(data)
+# Logic to validate that the request is valid
+# See https://trello.com/docs/gettingstarted/webhooks.html#triggering-webhooks
+
+def base64digest(data, secret):
+    chksum = hmac.new(secret, data, hashlib.sha1)
+    return base64.b64encode(chksum.digest())
+
+
+def validate_request(body, url, secret, result):
+    chksm = base64digest(body + url, secret)
+    return base64digest(chksm, secret) == base64digest(result, secret)
+
+
+def main():
+    if 'HTTP_X_TRELLO_WEBHOOK' not in os.environ:
+        print('No HTTP_X_TRELLO_WEBHOOK header. Aborting.')
+        sys.exit(1)
+
+    for key in ('WEBHOOK_URL', 'TRELLO_API_SECRET'):
+        if key not in os.environ:
+            print('%s env variable not set. Aborting.' % key)
+            sys.exit(1)
+
+    form = cgi.FieldStorage()
+
+    if not validate_request(form.value,
+                            os.environ['WEBHOOK_URL'],
+                            os.environ['TRELLO_API_SECRET'],
+                            os.environ['HTTP_X_TRELLO_WEBHOOK']):
+        print('Not called from trello.com.')
+        sys.exit(1)
+
+    data = json.loads(form.value)
+
+    try:
+        sprintboard.process_board(data['action']['data']['board']['name'])
+    except KeyError:
+        print 'Invalid data:'
+        pprint.pprint(data)
+
+if __name__ == "__main__":
+    main()
 
 # webhook ends here
